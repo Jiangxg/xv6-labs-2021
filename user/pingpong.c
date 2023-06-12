@@ -1,4 +1,4 @@
-// sleep.c
+// pingpong.c
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h" // 必须以这个顺序 include，由于三个头文件有依赖关系
