@@ -8,13 +8,29 @@
 int recursion(int plast[2]) {  //plast[2]是上一个管道的文件描述符
     int p[2];
     pipe(p);
+    int buf;
+    int start;
+
+    read(plast[0], &start, sizeof(start));
+    if (start == -1) exit(0);
     
+    printf("primes:%d", start);
+
     if (fork()!= 0) { // 父进程
-        close(p[1]);
-        while (read(p[0]))
+        close(plast[1]);  // 只从plast管道读取，不需要写入，所以关闭写入的文件描述符
+        close(p[0]);
+        while (read(plast[0], &buf, sizeof(buf)) != -1) {
+            if (buf % start != 0) { //给子进程
+                write(p[1], &buf, sizeof(buf));
+            }
+        }
+        write(p[1], &(-1), sizeof(int));
+        wait(0);
+        exit(0);
     }
     else {
-        
+        recursion(p);
+        exit(0);
     }
 
 
@@ -32,13 +48,14 @@ int main() {
         for (int i = 2; i<=35; i++) {
             write(p[1], &i, sizeof(i)); // 注意，write的第二个参数是地址
         }
+        write(p[1], &(-1), sizeof(int)); //作为结束符
         wait(0); //等待子进程完成
+        exit(0);
     }
 
     else { // 子进程
-        close(p[1]); //关闭写入进程，只从父进程中读取即可
         recursion(p);
+        exit(0);
     }
-
 }
 
