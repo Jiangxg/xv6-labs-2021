@@ -73,16 +73,52 @@ ls(char *path)
   close(fd);
 }
 
+
+void
+find(char *path, char *target){
+  char buf[512], *p;
+	int fd;
+	struct dirent de;
+	struct stat st;
+  
+  
+  // first, varify the path 
+  if ((fd = open(path, 0 )) < 0) {
+    printf("%s does not exist\n", path);
+    return;
+  }
+  
+  if (fstat(fd, &st) < 0) {
+    printf("can not stat %s\n", path);
+    close(fd); // close file before return
+    return;
+  }
+
+  switch(st.type){
+    case T_FILE:
+      pass;
+      break;
+    case T_DIR:
+      pass;
+      break;
+  }
+
+  close(fd)
+
+}
+
+
+
 int
 main(int argc, char *argv[])
 {
-  int i;
-
-  if(argc < 2){ // 只list当前路径下的文件
-    ls(".");
-    exit(0);
+  if(argc < 3){ // need 3 arguments
+    exit(1);
   }
-  for(i=1; i<argc; i++) //一次可以list多个路径
-    ls(argv[i]);
-  exit(0);
+
+  char target[512]; //why is 512?
+  target[0] = '/'; // the target begin with '/' is convenient
+  
+  find(argv[1], target);
+  exit(0)
 }
