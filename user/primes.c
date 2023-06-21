@@ -1,5 +1,4 @@
 // primes.c
-// 处理2-35中间的素数
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h" // 必须以这个顺序 include，由于三个头文件有依赖关系
@@ -14,7 +13,7 @@ int recursion(int plast[2]) {  //plast[2]是上一个管道的文件描述符，
     read(plast[0], &start, sizeof(start));
     if (start == -1) exit(0);
     
-    printf("primes %d\n", start);
+    printf("prime %d\n", start);
 
     if (fork()!= 0) { // 父进程
         close(p[0]);
