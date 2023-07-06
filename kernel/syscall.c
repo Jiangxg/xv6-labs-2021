@@ -11,7 +11,9 @@
 int
 fetchaddr(uint64 addr, uint64 *ip)
 {
+  // 返回当前进程的struct proc
   struct proc *p = myproc();
+
   if(addr >= p->sz || addr+sizeof(uint64) > p->sz)
     return -1;
   if(copyin(p->pagetable, (char *)ip, addr, sizeof(*ip)) != 0)
@@ -31,6 +33,8 @@ fetchstr(uint64 addr, char *buf, int max)
   return strlen(buf);
 }
 
+
+// 获取trapframe中用户保存在寄存器中的值
 static uint64
 argraw(int n)
 {
@@ -131,6 +135,32 @@ static uint64 (*syscalls[])(void) = {
 [SYS_trace]   sys_trace,
 };
 
+// 新增的映射表，从syscall编号到syscall名字
+const char *syscall_names[] = {
+[SYS_fork]    "fork",
+[SYS_exit]    "exit",
+[SYS_wait]    "wait",
+[SYS_pipe]    "pipe",
+[SYS_read]    "read",
+[SYS_kill]    "kill",
+[SYS_exec]    "exec",
+[SYS_fstat]   "fstat",
+[SYS_chdir]   "chdir",
+[SYS_dup]     "dup",
+[SYS_getpid]  "getpid",
+[SYS_sbrk]    "sbrk",
+[SYS_sleep]   "sleep",
+[SYS_uptime]  "uptime",
+[SYS_open]    "open",
+[SYS_write]   "write",
+[SYS_mknod]   "mknod",
+[SYS_unlink]  "unlink",
+[SYS_link]    "link",
+[SYS_mkdir]   "mkdir",
+[SYS_close]   "close",
+[SYS_trace]   "trace",
+};
+
 void
 syscall(void)
 {
@@ -140,6 +170,13 @@ syscall(void)
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
+
+    //在这里判断此用户进程的mask和系统调用类型匹不匹配
+    if((p->syscall_trace >> num) & 1) {
+      // 系统调用的返回值会存储在p->trapframe->a0中
+      printf("%d: syscall %s -> %d\n",p->pid, syscall_names[num], p->trapframe->a0); // syscall_names[num]: 从 syscall 编号到 syscall 名的映射表
+    }
+
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);

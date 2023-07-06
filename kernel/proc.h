@@ -83,6 +83,7 @@ struct trapframe {
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
+// 这个结构体是进程的定义，为了实现追踪功能trace(),加入一个mask, 这个mask指定了在当前进程中，应该追踪哪些系统调用
 struct proc {
   struct spinlock lock;
 
@@ -105,4 +106,5 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  uint64 syscall_trace;        // 为了实现trace()增加的信息，mask
 };
