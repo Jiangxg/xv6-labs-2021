@@ -394,6 +394,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 // Copy bytes to dst from virtual address srcva in a given page table,
 // until a '\0', or max.
 // Return 0 on success, -1 on error.
+// srcva 是user mode下页表中的虚拟地址
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
@@ -402,7 +403,12 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
   while(got_null == 0 && max > 0){
     va0 = PGROUNDDOWN(srcva);
+
+    // walkaddr()在软件中遍历页表，检查用户提供的虚拟地址是否为进程用户地址空间的一部分
+    // 返回的pa0是 srcva对应的物理地址
     pa0 = walkaddr(pagetable, va0);
+
+    // 
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (srcva - va0);
@@ -410,6 +416,8 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
       n = max;
 
     char *p = (char *) (pa0 + (srcva - va0));
+
+    // 将字符串内容复制到dst
     while(n > 0){
       if(*p == '\0'){
         *dst = '\0';

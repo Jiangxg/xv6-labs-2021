@@ -14,7 +14,10 @@ sub entry {
     print " ecall\n";
     print " ret\n";
 }
-	
+
+# 这个脚本会生成一个汇编文件，usys.S, 定义了用户态到内核态的跳板函数，称为stub
+# 在系统开发中，可能程序S想要完成某个操作（比如读取某个文件），但其本身没有这个权限, 
+# 所以S必须调用一个模块X。X的作用是调用操作系统内核中用来读取文件的模块。所以编程语言中的系统调用可以理解为一种stub。
 entry("fork");
 entry("exit");
 entry("wait");
@@ -36,3 +39,4 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+entry("trace");

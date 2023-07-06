@@ -2,6 +2,7 @@ struct stat;
 struct rtcdate;
 
 // system calls
+// 声明跳板函数，该跳板函数的定义在usys.pl脚本生成的汇编文件usys.S
 int fork(void);
 int exit(int) __attribute__((noreturn));
 int wait(int*);
@@ -23,6 +24,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int trace(int); // 我们新增的跳板函数trace()的声明
 
 // ulib.c
 int stat(const char*, struct stat*);
