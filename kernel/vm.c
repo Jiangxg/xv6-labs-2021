@@ -21,9 +21,12 @@ kvmmake(void)
 {
   pagetable_t kpgtbl;
 
+  // 为最高一级page directory分配物理page
   kpgtbl = (pagetable_t) kalloc();
+  // 将这段内存初始化为0
   memset(kpgtbl, 0, PGSIZE);
 
+  // 将io设备映射到内核，是直接映射，所以第二个参数（虚拟地址）和第三个参数（物理地址）相同
   // uart registers
   kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
@@ -263,21 +266,30 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
+// pagetable_t 是一个指向uint64的指针
+// pagetable[512] 代表一级页表的512个pte，每一个pte的类型uint64
 void
 freewalk(pagetable_t pagetable)
 {
   // there are 2^9 = 512 PTEs in a page table.
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
+    
+    // 此条件判断：该PTE是否有效 而且 PTE的RWX都不使能（不是叶子节点）
     if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
       // this PTE points to a lower-level page table.
       uint64 child = PTE2PA(pte);
       freewalk((pagetable_t)child);
+      
+      // 为什么设置为0就是free掉了？
       pagetable[i] = 0;
+
     } else if(pte & PTE_V){
       panic("freewalk: leaf");
     }
   }
+
+  // 这个free是什么意思？
   kfree((void*)pagetable);
 }
 

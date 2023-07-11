@@ -17,6 +17,8 @@
 // end -- start of kernel page allocation area
 // PHYSTOP -- end RAM used by the kernel
 
+
+// 这一堆常量定义了虚拟内存地址的重要节点
 // qemu puts UART registers here in physical memory.
 #define UART0 0x10000000L
 #define UART0_IRQ 10
@@ -48,11 +50,17 @@
 // the kernel expects there to be RAM
 // for use by the kernel and user pages
 // from physical address 0x80000000 to PHYSTOP.
+
+// 后缀"L"指是8字节的long 类型
+// 这是内存的起点，在此之前，虚拟地址
 #define KERNBASE 0x80000000L
+
+// 将内存容量限制在128M以内
 #define PHYSTOP (KERNBASE + 128*1024*1024)
 
 // map the trampoline page to the highest address,
 // in both user and kernel space.
+// 虚拟地址 多对一 物理地址
 #define TRAMPOLINE (MAXVA - PGSIZE)
 
 // map kernel stacks beneath the trampoline,

@@ -17,7 +17,7 @@ main()
     printf("xv6 kernel is booting\n");
     printf("\n");
     kinit();         // physical page allocator
-    kvminit();       // create kernel page table
+    kvminit();       // create kernel page table，设置好kernel的地址空间
     kvminithart();   // turn on paging
     procinit();      // process table
     trapinit();      // trap vectors

@@ -8,6 +8,7 @@
 
 struct cpu cpus[NCPU];
 
+// NPROC=64  最大支持的线程数量
 struct proc proc[NPROC];
 
 struct proc *initproc;
@@ -33,7 +34,10 @@ void
 proc_mapstacks(pagetable_t kpgtbl) {
   struct proc *p;
   
+  // 遍历NPROC个线程，问，此时的proc[NPROC]存在哪里呢？gdb试一下
   for(p = proc; p < &proc[NPROC]; p++) {
+    
+    // 在物理内存上分配一个页，4k
     char *pa = kalloc();
     if(pa == 0)
       panic("kalloc");
