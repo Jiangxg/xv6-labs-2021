@@ -56,7 +56,8 @@ procinit(void)
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-      p->kstack = KSTACK((int) (p - proc));
+      // 这一行是该进程p对应的内核栈的虚拟地址
+      //p->kstack = KSTACK((int) (p - proc));
   }
 }
 
@@ -147,6 +148,18 @@ found:
     return 0;
   }
 
+  // 为该进程的内核页表中的内核栈做映射
+  // 分配一个物理页，作为新进程的内核栈使用
+  // 类似于proc_mapstacks()做的事情
+  char *pa = kalloc();
+  if(pa == 0)
+    panic("kalloc");
+  uint64 va = KSTACK((int)0); // 将内核栈映射到固定的逻辑地址上，所有的进程的内核栈的虚拟地址都是一样的
+  // printf("map krnlstack va: %p to pa: %p\n", va, pa);
+  kvmmap(p->kernelpt, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+  p->kstack = va; // 记录内核栈的逻辑地址，其实已经是固定的了，依然这样记录是为了避免需要修改其他部分 xv6 代码
+
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
@@ -158,7 +171,7 @@ found:
 
 // free a proc structure and the data hanging from it,
 // including user pages.
-// p->lock must be held.
+// p->lock must be held. 
 static void
 freeproc(struct proc *p)
 {
@@ -175,7 +188,28 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+
+  // 如果每一个进程都有一个页表，则需要在此释放进程的内核栈
+  // 释放进程的内核栈
+  void *kstack_pa = (void *)kvm_pa(p->kernelpt, p->kstack);
+  // printf("trace: free kstack %p\n", kstack_pa);
+
+  // 先释放内存
+  kfree(kstack_pa);
+  
+  // 再解除绑定
+  p->kstack = 0;
+  
+  // 注意：此处不能使用 proc_freepagetable，因为其不仅会释放页表本身，还会把页表内所有的叶节点对应的物理页也释放掉。
+  // 这会导致内核运行所需要的关键物理页被释放，从而导致内核崩溃。
+  // 这里使用 kfree(p->kernelpgtbl) 也是不足够的，因为这只释放了**一级页表本身**，而不释放二级以及三级页表所占用的空间。
+  
+  // 最后递归释放进程独享的页表，释放页表本身所占用的空间，但**不释放页表指向的物理页**
+  kvm_free_kernelpgtbl(p->kernelpt);
+  p->kernelpt = 0;
+
   p->state = UNUSED;
+
 }
 
 // Create a user page table for a given process,
@@ -446,6 +480,7 @@ wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+// scheduler是一个线程切换函数，第四章（中断）应该会讲到这一个函数
 void
 scheduler(void)
 {
@@ -465,7 +500,17 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        swtch(&c->context, &p->context);
+
+        // 切换到进程独立的内核页表
+        // 类似于kvminithard()做的事情
+        w_satp(MAKE_SATP(p->kernelpt));
+        sfence_vma(); // 每一次切换页表都要刷新TLB
+
+        swtch(&c->context, &p->context); // // 调度，执行进程
+
+        // 切换回全局内核页表
+        // 因为没有进程运行时scheduler()应当使用kernel_pagetable
+        kvminithart();
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.

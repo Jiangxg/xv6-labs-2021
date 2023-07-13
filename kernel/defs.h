@@ -172,7 +172,8 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);   // 添加函数声明
 pagetable_t     proc_kpt_init(); //添加函数声明
-void            
+uint64          kvm_pa(pagetable_t, uint64); //添加函数声明
+void            kvm_free_kernelpgtbl(pagetable_t); //添加函数声明
 
 // plic.c
 void            plicinit(void);

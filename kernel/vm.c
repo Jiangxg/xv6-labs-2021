@@ -15,10 +15,64 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+// 递归释放一个内核页表中的所有 mapping，但是不释放其指向的物理页
+void
+kvm_free_kernelpgtbl(pagetable_t pagetable)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    uint64 child = PTE2PA(pte);
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){ // 如果该页表项指向更低一级的页表
+      // 递归释放低一级页表及其页表项
+      kvm_free_kernelpgtbl((pagetable_t)child);
+      pagetable[i] = 0;
+    }
+  }
+  kfree((void*)pagetable); // 释放当前级别页表所占用空间
+}
+
+
+
+
+// 将进程的内核页表映射到物理地址
+pagetable_t
+pro_cpt_make(void)
+{
+  pagetable_t kpgtbl;
+
+  // 为最高一级page directory分配物理内存（一页，4KB的空间），
+  kpgtbl = (pagetable_t) kalloc();
+  // 将这段内存初始化为0
+  memset(kpgtbl, 0, PGSIZE);
+
+  // 将io设备映射到内核，是直接映射，所以第二个参数（虚拟地址）和第三个参数（物理地址）相同
+  // uart registers
+  kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // PLIC
+  kvmmap(kpgtbl, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  kvmmap(kpgtbl, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  kvmmap(kpgtbl, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  
+  return kpgtbl;
+}
+
 // 创建进程的内核页表, 功能类似于kvminit()
 pagetable_t
 proc_kpt_init() {
-  return kvmmake();
+  return pro_cpt_make();
 }
 
 
@@ -147,6 +201,24 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     }
   }
   return &pagetable[PX(0, va)];
+}
+
+
+// kvm_pa 将内核逻辑地址转换为物理地址（添加第一个参数 kernelpgtbl）
+uint64
+kvm_pa(pagetable_t pgtbl, uint64 va)
+{
+  uint64 off = va % PGSIZE;
+  pte_t *pte;
+  uint64 pa;
+
+  pte = walk(pgtbl, va, 0);
+  if(pte == 0)
+    panic("kvm_pa");
+  if((*pte & PTE_V) == 0)
+    panic("kvm_pa");
+  pa = PTE2PA(*pte);
+  return pa+off;
 }
 
 // Look up a virtual address, return the physical address,
