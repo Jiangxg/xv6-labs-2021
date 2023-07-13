@@ -105,4 +105,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // 新增的字段，对每一个进程都维护一个自己的内核页表
+  pagetable_t kernelpt;       // kernel page table
 };

@@ -170,6 +170,9 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+void            vmprint(pagetable_t);   // 添加函数声明
+pagetable_t     proc_kpt_init(); //添加函数声明
+void            
 
 // plic.c
 void            plicinit(void);

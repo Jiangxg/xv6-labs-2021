@@ -15,13 +15,60 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+// 创建进程的内核页表, 功能类似于kvminit()
+pagetable_t
+proc_kpt_init() {
+  return kvmmake();
+}
+
+
+
+
+// 打印页表内容的函数
+/**
+ * @param pagetable 所要打印的页表
+ * @param level 页表的层级
+ */
+void
+_vmprint(pagetable_t pagetable, int level){
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    // PTE_V is a flag for whether the page table is valid
+    if(pte & PTE_V){
+      for (int j = 0; j < level; j++){
+        if (j) printf(" ");
+        printf("..");
+      }
+      uint64 child = PTE2PA(pte);
+      printf("%d: pte %p pa %p\n", i, pte, child);
+      if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
+        // this PTE points to a lower-level page table.
+        _vmprint((pagetable_t)child, level + 1);
+      }
+    }
+  }
+}
+
+/**
+ * @brief vmprint 打印页表
+ * @param pagetable 所要打印的页表
+ */
+void
+vmprint(pagetable_t pagetable){
+  printf("page table %p\n", pagetable);
+  _vmprint(pagetable, 1);
+}
+
+
+
 // Make a direct-map page table for the kernel.
 pagetable_t
 kvmmake(void)
 {
   pagetable_t kpgtbl;
 
-  // 为最高一级page directory分配物理page
+  // 为最高一级page directory分配物理内存（一页，4KB的空间），
   kpgtbl = (pagetable_t) kalloc();
   // 将这段内存初始化为0
   memset(kpgtbl, 0, PGSIZE);
@@ -61,9 +108,11 @@ kvminit(void)
 
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
+// h/w page table register指的是 hardware page table register, 即satp寄存器
 void
 kvminithart()
 {
+  // kernel_pagetable 是一个pagetable_t（uint64*）类型的变量
   w_satp(MAKE_SATP(kernel_pagetable));
   sfence_vma();
 }
@@ -268,6 +317,7 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 // All leaf mappings must already have been removed.
 // pagetable_t 是一个指向uint64的指针
 // pagetable[512] 代表一级页表的512个pte，每一个pte的类型uint64
+// 递归的释放页表页
 void
 freewalk(pagetable_t pagetable)
 {

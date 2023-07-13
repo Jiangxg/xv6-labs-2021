@@ -194,15 +194,21 @@ w_pmpaddr0(uint64 x)
 }
 
 // use riscv's sv39 page table scheme.
+// satp的最高4bit是控制位，设置为8，指代的是SV39的虚拟地址模式
 #define SATP_SV39 (8L << 60)
 
+// pagetable是一个uint64的指针，指向kernel_pagetable（512个pte(uint64)的数组）的首地址（物理地址）
+// 因为页表的物理存储是4KB对齐的，所以物理地址的后12为全是0，可以不存在satp中
 #define MAKE_SATP(pagetable) (SATP_SV39 | (((uint64)pagetable) >> 12))
 
-// supervisor address translation and protection;
+// supervisor address translation and protection (SATP的全称);
 // holds the address of the page table.
+// 通过写入satp寄存器跳转/使用页表
 static inline void 
 w_satp(uint64 x)
 {
+  // The 'asm volatile' keyword informs the compiler that 
+  // the assembly instruction has side effects and should not be optimized away.
   asm volatile("csrw satp, %0" : : "r" (x));
 }
 

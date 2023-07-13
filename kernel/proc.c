@@ -139,6 +139,14 @@ found:
     return 0;
   }
 
+  // 初始化进程的内核页表
+  p->kernelpt = proc_kpt_init(p);
+  if (p->kernelpt == 0) { // 模仿用户页表的初始化，处理异常情况（没有分配）
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
