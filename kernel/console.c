@@ -55,6 +55,7 @@ struct {
 //
 // user write()s to the console go here.
 //
+// 可以认为consolewrite是一个UART驱动的top部分
 int
 consolewrite(int user_src, uint64 src, int n)
 {
@@ -183,6 +184,7 @@ consoleinit(void)
 {
   initlock(&cons.lock, "cons");
 
+  //配置好UART芯片使其可以被使用
   uartinit();
 
   // connect read and write system calls

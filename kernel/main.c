@@ -11,7 +11,7 @@ void
 main()
 {
   if(cpuid() == 0){
-    consoleinit();
+    consoleinit();   // 初始化console
     printfinit();
     printf("\n");
     printf("xv6 kernel is booting\n");
@@ -22,8 +22,9 @@ main()
     procinit();      // process table
     trapinit();      // trap vectors
     trapinithart();  // install kernel trap vector
-    plicinit();      // set up interrupt controller
-    plicinithart();  // ask PLIC for device interrupts
+    plicinit();      // set up interrupt controller, 以使中断能被cpu所感知
+    //每个CPU的核都需要调用plicinithart函数表明对于哪些外设中断感兴趣。
+    plicinithart();  // ask PLIC for device interrupts，
     binit();         // buffer cache
     iinit();         // inode table
     fileinit();      // file table

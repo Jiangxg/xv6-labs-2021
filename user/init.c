@@ -11,15 +11,20 @@
 
 char *argv[] = { "sh", 0 };
 
+
+// 这是系统启动后运行的第一个进程。
 int
 main(void)
 {
   int pid, wpid;
 
+  // 通过mknod操作创建了console设备。因为这是第一个打开的文件，所以这里的文件描述符0。
   if(open("console", O_RDWR) < 0){
     mknod("console", CONSOLE, 0);
     open("console", O_RDWR);
   }
+  // 通过dup创建stdout和stderr。这里实际上通过复制文件描述符0，得到了另外两个文件描述符1，2。
+  // 最终，文件描述符0,1,2都代表console
   dup(0);  // stdout
   dup(0);  // stderr
 
@@ -31,6 +36,8 @@ main(void)
       exit(1);
     }
     if(pid == 0){
+
+      //在fork的子进程中，通过exec运行sh程序
       exec("sh", argv);
       printf("init: exec sh failed\n");
       exit(1);

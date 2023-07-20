@@ -88,6 +88,8 @@ sys_write(void)
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argaddr(1, &p) < 0)
     return -1;
 
+  // 类unix系统通过文件管理所有设备，所以filewrite中会判断文件f的类型
+  // 对于不同的文件执行不同的写入操作
   return filewrite(f, p, n);
 }
 

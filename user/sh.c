@@ -133,6 +133,7 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
+  // sh程序向console打印一个$符号，最终会走到write系统调用
   fprintf(2, "$ ");
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
