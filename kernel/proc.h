@@ -107,5 +107,5 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   // 新增的字段，对每一个进程都维护一个自己的内核页表
-  pagetable_t kernelpt;       // kernel page table
+  pagetable_t kernelpt;       // lab3.2：kernel page table
 };

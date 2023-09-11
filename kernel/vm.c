@@ -89,14 +89,14 @@ _vmprint(pagetable_t pagetable, int level){
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
     // PTE_V is a flag for whether the page table is valid
-    if(pte & PTE_V){
+    if(pte & PTE_V){  // 
       for (int j = 0; j < level; j++){
         if (j) printf(" ");
         printf("..");
       }
       uint64 child = PTE2PA(pte);
       printf("%d: pte %p pa %p\n", i, pte, child);
-      if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      if((pte & (PTE_R|PTE_W|PTE_X)) == 0){ // lab3.1 如果RWX=0,但是V=1，则指向下一层
         // this PTE points to a lower-level page table.
         _vmprint((pagetable_t)child, level + 1);
       }
@@ -110,7 +110,7 @@ _vmprint(pagetable_t pagetable, int level){
  */
 void
 vmprint(pagetable_t pagetable){
-  printf("page table %p\n", pagetable);
+  printf("page table %p\n", pagetable); //lab3.1 打印页表的物理地址, %p是十六进制补零打印
   _vmprint(pagetable, 1);
 }
 
@@ -403,7 +403,7 @@ freewalk(pagetable_t pagetable)
       uint64 child = PTE2PA(pte);
       freewalk((pagetable_t)child);
       
-      // 为什么设置为0就是free掉了？
+      // 使用0覆盖掉
       pagetable[i] = 0;
 
     } else if(pte & PTE_V){
@@ -411,7 +411,7 @@ freewalk(pagetable_t pagetable)
     }
   }
 
-  // 这个free是什么意思？
+  // 将物理页释放掉
   kfree((void*)pagetable);
 }
 

@@ -116,7 +116,8 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
   
-  vmprint(p->pagetable); // 按照实验要求，在 exec 返回之前打印一下页表。
+  
+  if(p->pid == 1) vmprint(p->pagetable); // lab3.1: 按照实验要求，在 exec 返回之前打印一下页表。
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
