@@ -140,7 +140,7 @@ found:
     return 0;
   }
 
-  //lab3.2： 初始化进程的内核页表
+  //lab3.2： 初始化进程的内核页表，但是没有分配KSACKS
   p->kernelpt = proc_kpt_init(p);
   if (p->kernelpt == 0) { // 模仿用户页表的初始化，处理异常情况（没有分配）
     freeproc(p);
@@ -148,7 +148,7 @@ found:
     return 0;
   }
 
-  // lab3.2：为该进程的内核页表中的内核栈做映射
+  // lab3.2：为该进程的内核页表中的内核栈做映射，
   // 分配一个物理页，作为新进程的内核栈使用
   // 类似于proc_mapstacks()做的事情
   char *pa = kalloc();
@@ -189,7 +189,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
 
-  // 如果每一个进程都有一个页表，则需要在此释放进程的内核栈
+  // lab3.2：如果每一个进程都有一个页表，则需要在此释放进程的内核栈
   // 释放进程的内核栈
   void *kstack_pa = (void *)kvm_pa(p->kernelpt, p->kstack);
   // printf("trace: free kstack %p\n", kstack_pa);
@@ -200,11 +200,11 @@ freeproc(struct proc *p)
   // 再解除绑定
   p->kstack = 0;
   
-  // 注意：此处不能使用 proc_freepagetable，因为其不仅会释放页表本身，还会把页表内所有的叶节点对应的物理页也释放掉。
+  // lab3.2：注意：此处不能使用 proc_freepagetable，因为其不仅会释放页表本身，还会把页表内所有的叶节点对应的物理页也释放掉。
   // 这会导致内核运行所需要的关键物理页被释放，从而导致内核崩溃。
   // 这里使用 kfree(p->kernelpgtbl) 也是不足够的，因为这只释放了**一级页表本身**，而不释放二级以及三级页表所占用的空间。
   
-  // 最后递归释放进程独享的页表，释放页表本身所占用的空间，但**不释放页表指向的物理页**
+  // 最后递归释放进程独享的页表，释放页表本身所占用的空间，但**不释放页表指向的物理页**，因为这些物理页还被其他内核进程页表和内核页表所使用
   kvm_free_kernelpgtbl(p->kernelpt);
   p->kernelpt = 0;
 
@@ -501,14 +501,14 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
-        // 切换到进程独立的内核页表
+        // lab3.2：切换到进程独立的内核页表
         // 类似于kvminithard()做的事情
         w_satp(MAKE_SATP(p->kernelpt));
         sfence_vma(); // 每一次切换页表都要刷新TLB
 
-        swtch(&c->context, &p->context); // // 调度，执行进程
+        swtch(&c->context, &p->context); // // lab3.2：调度，执行进程；进程运行完后，CPU回到这里继续执行
 
-        // 切换回全局内核页表
+        // lab3.2：切换回全局内核页表
         // 因为没有进程运行时scheduler()应当使用kernel_pagetable
         kvminithart();
 
