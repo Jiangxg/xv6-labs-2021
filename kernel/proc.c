@@ -111,8 +111,8 @@ allocproc(void)
 {
   struct proc *p;
 
-  for(p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
+  for(p = proc; p < &proc[NPROC]; p++) { //遍历proc[]数组，找到能使用
+    acquire(&p->lock);  //acquire不到，难道不会阻塞吗？
     if(p->state == UNUSED) {
       goto found;
     } else {
@@ -140,7 +140,7 @@ found:
     return 0;
   }
 
-  // 初始化进程的内核页表
+  //lab3.2： 初始化进程的内核页表
   p->kernelpt = proc_kpt_init(p);
   if (p->kernelpt == 0) { // 模仿用户页表的初始化，处理异常情况（没有分配）
     freeproc(p);
@@ -148,7 +148,7 @@ found:
     return 0;
   }
 
-  // 为该进程的内核页表中的内核栈做映射
+  // lab3.2：为该进程的内核页表中的内核栈做映射
   // 分配一个物理页，作为新进程的内核栈使用
   // 类似于proc_mapstacks()做的事情
   char *pa = kalloc();
@@ -156,7 +156,7 @@ found:
     panic("kalloc");
   uint64 va = KSTACK((int)0); // 将内核栈映射到固定的逻辑地址上，所有的进程的内核栈的虚拟地址都是一样的
   // printf("map krnlstack va: %p to pa: %p\n", va, pa);
-  kvmmap(p->kernelpt, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+  uvmmap(p->kernelpt, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   p->kstack = va; // 记录内核栈的逻辑地址，其实已经是固定的了，依然这样记录是为了避免需要修改其他部分 xv6 代码
 
 
